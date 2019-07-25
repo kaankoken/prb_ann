@@ -2,21 +2,40 @@
 import os
 import pandas as pd
 import numpy as np
-from google.colab import drive, files
 import matplotlib.pyplot as pylot
+
+from datetime import  tzinfo, timezone
+from datetime import datetime as dt
+from google.colab import drive, files
 
 #%%
 class PreProcess:
-    __csv_path: str
-    def __init__(self, csv_path: str = 'Colab Notebooks/bq-results-20190628-104852-awu4v6ig6fyq.csv'):
-        if csv_path.startswith('/'):
-            self.__csv_path = '.' + csv_path
-        else:
-            self.__csv_path = './' + csv_path
-
-    def read_file(self):
-        df = pd.read_csv(self.__csv_path)
+    #reads csv file at the given path
+    def read_file(self, path: str):
+        if path.startswith('/'):
+            path = '.' + path
+        elif not path.startswith('/') or not path.startswith('.'):
+            path = './' + path
+        else: pass
+        df = pd.read_csv(path)
         return df
+
+    #converts the date time to timestamp
+    def convert_timestamps(self, data_frame: pd.DataFrame):
+        try:
+            tm = dt.strptime(data_frame, '%Y-%m-%d %H:%M:%S.%f %Z')
+        except ValueError:
+            tm = dt.strptime(data_frame, '%Y-%m-%d %H:%M:%S %Z')
+        converted = tm.timestamp() * 1000 
+        return converted
+    
+    def sort_values(self, data_frame: pd.DataFrame, value: str = 'user_id', asc: bool = False):
+        data = data_frame.sort_values([i for i in value], ascending=asc).reset_index(drop=True)
+        return data
+    
+    def split_to_trip(self, data_frame: pd.DataFrame):
+        data_frame['trip'] = (data_frame['timestamp'] - data_frame[i]['timestamp'].shift(1) > 60000).cumsum()
+        return data_frame
 
 #%%
 class GoogleDrive:
@@ -41,4 +60,20 @@ class GoogleDrive:
         uploaded = files.upload()
         return
 #%%
-    class Model:
+class Model:
+
+#%%
+gdrive = GoogleDrive()
+pre_process = PreProcess()
+
+#%%
+gdrive.mount_drive()
+path = 'Colab Notebooks/bq-results-20190628-104852-awu4v6ig6fyq.csv'
+data_frame = pre_process.read_file(path)
+
+#%%
+data_frame['timestamp'] = data_frame['timestamp'].apply(pre_process.convert_timestamps)
+sort_parameter = ['user_id', 'timestamp']
+data_frame = pre_process.sort_values(data_frame, sort_parameter, False)
+
+#%%
