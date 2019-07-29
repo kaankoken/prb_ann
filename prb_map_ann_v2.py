@@ -75,6 +75,42 @@ class PreProcess:
                 y.append(i)
 
         return y
+    
+    def find_min_max(self, value: pd.DataFrame):
+        max = value.max()
+        min = value.min()
+        return min, max
+
+    def divide_by_angle_norm(self, data: pd.DataFrame, d_type: str):
+        if (d_type == 'lat'):
+            normalized_data = data / 180
+        else:
+            normalized_data = data / 360
+        return normalized_data
+
+    def denorm_angle(self, result):
+        denorm_x = result[0][0][1] * 180
+        denorm_y = result[0][0][2] * 360
+
+        return denorm_x, denorm_y
+
+    def min_max_norm(self, data: pd.DataFrame, min: int, max: int):
+        if (max - min == 0):
+            max = 1 
+        normalized_data = ((data - min) / ((max - min)))
+        return normalized_data
+
+    def denorm_min_max(self, result, min: int, max: int, key: str):
+        if (key == 'lat'):
+            denormalized = result[0][0][1] * max - result[0][0][1] * min + min
+        else:
+            denormalized = result[0][0][2] * max - result[0][0][2] * min + min
+        return denormalized
+
+    '''def fitData(self, value: pd.DataFrame, min: int, max: int):
+        fitedData = np.interp(value, (min, max), (0, +1))
+        return fitedData'''
+
 #%%
 class GoogleDrive:
     #mounts the drive and change the file path to google drive's path
@@ -116,11 +152,19 @@ data_frame = pre_process.drop_if_small(data_frame, 4)
 
 #%%
 for i in range(0,len(data_frame)):
-  data_frame[i]['trip'] = (data_frame[i]['timestamp'] - data_frame[i]['timestamp'].shift(1) > 60000).cumsum()
+    data_frame[i]['trip'] = (data_frame[i]['timestamp'] - data_frame[i]['timestamp'].shift(1) > 60000).cumsum()
 #%%
 for i in range(0,len(data_frame)):
-  data_frame[i] = pre_process.divide_to_trip(data_frame[i])
+    data_frame[i] = pre_process.divide_to_trip(data_frame[i])
 data_frame = pre_process.flatten(data_frame)
+data_frame = pre_process.drop_if_small(data_frame, 4)
 
 #%%
-data_frame = pre_process.drop_if_small(data_frame, 4)
+for i in data_frame:
+    min_lat, max_lat = pre_process.find_min_max(i['latitude'])
+    min_long, max_long = pre_process.find_min_max(i['longitude'])
+    min_time, max_time = pre_process.find_min_max(i['timestamp'])
+    i['latitude'] = pre_process.min_max_norm(i['latitude'], min_lat, max_lat)
+    i['longitude'] = pre_process.min_max_norm(i['longitude'], min_long, max_long)
+    i['timestamp'] = pre_process.min_max_norm(i['timestamp'], min_time, max_time)
+    i.drop('user_id', axis=1, inplace=True)
