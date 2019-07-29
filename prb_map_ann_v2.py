@@ -120,7 +120,7 @@ class PreProcess:
           X.append(np.array(seq_x))
           y.append(np.array(seq_y))
         return X, y
-        
+
     '''def fitData(self, value: pd.DataFrame, min: int, max: int):
         fitedData = np.interp(value, (min, max), (0, +1))
         return fitedData'''
@@ -182,3 +182,26 @@ for i in data_frame:
     i['longitude'] = pre_process.min_max_norm(i['longitude'], min_long, max_long)
     i['timestamp'] = pre_process.min_max_norm(i['timestamp'], min_time, max_time)
     i.drop('user_id', axis=1, inplace=True)
+
+#%%
+look_back = 3
+data_frame_copy = data_frame.copy()
+#data_frame_copy[0]['latitude'][0] = pre_process.denorm_min_max(data_frame_copy[0]['latitude'][0], lat[0][0], lat[0][1])
+
+#%%
+#work on single dataset
+
+for i in data_frame_copy:
+  if (len(i) == 19082):
+    x = i
+
+train_size = int(len(x) * 0.67)
+test_size = len(x) - train_size
+
+train = x[0: train_size]
+test = x[train_size: len(x)]
+
+train_x, train_y = pre_process.create_dataset(train, 3)
+test_x, test_y = pre_process.create_dataset(test, 3)
+
+#%%
