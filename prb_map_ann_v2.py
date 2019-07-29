@@ -107,6 +107,20 @@ class PreProcess:
             denormalized = result[0][0][2] * max - result[0][0][2] * min + min
         return denormalized
 
+    def create_dataset(self, data: pd.DataFrame, n_steps: int):
+        X, y = list(), list()
+        for i in range(len(data)):
+          # find the end of this pattern
+          end_ix = i + n_steps
+          # check if we are beyond the dataset
+          if end_ix > len(data)-1:
+            break
+          # gather input and output parts of the pattern
+          seq_x, seq_y = data.iloc[i:end_ix, :], data.iloc[end_ix, :]
+          X.append(np.array(seq_x))
+          y.append(np.array(seq_y))
+        return X, y
+        
     '''def fitData(self, value: pd.DataFrame, min: int, max: int):
         fitedData = np.interp(value, (min, max), (0, +1))
         return fitedData'''
