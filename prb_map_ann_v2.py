@@ -8,6 +8,10 @@ from datetime import  tzinfo, timezone
 from datetime import datetime as dt
 from google.colab import drive, files
 
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dense, Dropout, LSTM, GRU, TimeDistributed, RepeatVector, Flatten
+
 #%%
 class PreProcess:
     #reads csv file at the given path
@@ -119,7 +123,7 @@ class PreProcess:
           seq_x, seq_y = data.iloc[i:end_ix, :], data.iloc[end_ix, :]
           X.append(np.array(seq_x))
           y.append(np.array(seq_y))
-        return X, y
+        return np.array(X), np.array(y)
 
     '''def fitData(self, value: pd.DataFrame, min: int, max: int):
         fitedData = np.interp(value, (min, max), (0, +1))
@@ -149,7 +153,30 @@ class GoogleDrive:
         return
 #%%
 class Model:
-
+    def set_the_model(self, look_back):
+        self.model = Sequential()
+        self.model.add(LSTM(32, activation="tanh", input_shape=(look_back, 3),return_sequences=True)) #, stateful=True
+        self.model.add(Dropout(0.2))
+        self.model.add(LSTM(64, activation="tanh", return_sequences=True))
+        self.model.add(Dropout(0.2))
+        self.model.add(LSTM(128, activation="tanh", return_sequences=True))
+        self.model.add(LSTM(64, activation="tanh", return_sequences=True))
+        self.model.add(LSTM(32, activation="tanh", return_sequences=True)) #, stateful=True
+        self.model.add(TimeDistributed(Dense(look_back, activation="relu")))
+        #self.model.add(Dense(3))
+        self.model.compile(loss="mse", optimizer="nadam", metrics=['acc']) #mse
+        self.model.summary()
+    
+    def start_train(self, trainD1, trainD2):
+        es = EarlyStopping(monitor='loss', patience = 2, mode='min')
+        #for i in range(1, 7): #len(trainD1)
+          #x, y = trainD1[(i - 1) * 10357: i *10357], trainD2[(i - 1) * 10357: i *10357]
+        self.model.fit(trainD1, trainD1, epochs=100, batch_size = 32, verbose=1,  callbacks=[es])
+        #  self.model.reset_states()
+    
+    def predict_result(self, test_case):
+        value = self.model.predict(test_case, verbose=0)
+        return value
 #%%
 gdrive = GoogleDrive()
 pre_process = PreProcess()
@@ -204,4 +231,29 @@ test = x[train_size: len(x)]
 train_x, train_y = pre_process.create_dataset(train, 3)
 test_x, test_y = pre_process.create_dataset(test, 3)
 
+train_x = train_x.reshape(train_x.shape[0], train_x.shape[1], 3)
+test_x = test_x.reshape(test_x.shape[0], test_x.shape[1], 3)
+
+
 #%%
+model = Model()
+model.set_the_model(look_back)
+model.start_train(train_x, train_y)
+
+#%%
+test_res = model.predict_result(test_x[0:1])
+
+plt.scatter(test_res[0][0][1], test_res[0][0][2], color='red', alpha=0.2)
+plt.scatter(testY[0][1], testY[0][2], color='blue', alpha=0.2)
+#%%
+
+import folium
+
+m = folium.Map(location=[39.9334, 32.8597], zoom_start=15)
+# I can add marker one by one on the map
+folium.Marker([denormalizedX, denormalizedY], popup='prediction').add_to(m)
+for i, j in zip(x, y):
+  folium.CircleMarker(location=[i, j], popup='real1', radius=2, icon=folium.Icon(color='rbg', angle=76)).add_to(m)
+
+#m.save(outfile='gdrive/My Drive/Colab Notebooks/map.html')
+m
