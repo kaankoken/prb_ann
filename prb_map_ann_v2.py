@@ -169,10 +169,7 @@ class Model:
     
     def start_train(self, trainD1, trainD2):
         es = EarlyStopping(monitor='loss', patience = 2, mode='min')
-        #for i in range(1, 7): #len(trainD1)
-          #x, y = trainD1[(i - 1) * 10357: i *10357], trainD2[(i - 1) * 10357: i *10357]
-        self.model.fit(trainD1, trainD1, epochs=100, batch_size = 32, verbose=1,  callbacks=[es])
-        #  self.model.reset_states()
+        self.model.fit(trainD1, trainD1, epochs=300, batch_size = 32, verbose=1,  callbacks=[es])
     
     def predict_result(self, test_case):
         value = self.model.predict(test_case, verbose=0)
